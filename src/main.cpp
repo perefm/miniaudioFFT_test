@@ -13,13 +13,13 @@ using namespace Phoenix;
 
 
 void playSound(SoundManager &sm, uint32_t id) {
-		SP_Sound mySound;
-		mySound = sm.getSoundbyID(id);
-		if (mySound) {
-			if (!mySound->playSound())
-				printf("\nError playing Sound %d", id);
-			printf("\nPlaying Sound %d - %s", id, mySound->filePath.c_str());
-		}
+	SP_Sound mySound;
+	mySound = sm.getSoundbyID(id);
+	if (mySound) {
+		if (!mySound->playSound())
+			printf("\nError playing Sound %d", id);
+		printf("\nPlaying Sound %d - %s", id, mySound->filePath.c_str());
+	}
 }
 
 void restartSound(SoundManager& sm, uint32_t id) {
@@ -55,9 +55,6 @@ int main(int argc, char* argv[])
 {
 	SoundManager soundManager;
 
-	if (!soundManager.initEngine())
-		printf("\nError at Init!\n");
-
 	char charCaptured = 0;
 	printf("\nMiniaudio version: %s\n", soundManager.getVersion().c_str());
 
@@ -82,6 +79,8 @@ int main(int argc, char* argv[])
 	printf("\n\np-Clear all songs from memory");
 	
 	printf("\n\nChoose wisely!!!!\n");
+
+	soundManager.playDevice();
 
 	while (charCaptured != 'z') {
 		charCaptured = getchar();
@@ -143,8 +142,8 @@ int main(int argc, char* argv[])
 		case 'z':
 			printf("\nBye!");
 
+			soundManager.stopDevice();
 			soundManager.clearSounds();
-			soundManager.uninitEngine();
 			break;
 		}
 	}
