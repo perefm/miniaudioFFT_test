@@ -222,8 +222,15 @@ namespace Phoenix {
 		for (auto const& mySound : (p->sound)) {
 			if (mySound->status == Sound::State::playing) {
 				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), pOutputF32, frameCount);
+				if (framesRead < frameCount) {
+					mySound->stopSound();
+				}
 			}
 		}
+
+		//debug
+		//if ((*pOutputF32) != 0.0)
+		//	printf("\noutput: %.5f",  (*pOutputF32));
 
 		(void)pInput;
 	}
