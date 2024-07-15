@@ -28,11 +28,16 @@ namespace Phoenix {
 		void seekSound(float second); // Seek sound
 		void setSoundVolume(float volume);
 
+	private:
+		void unLoadSong();	// Unload song
+		static void dataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
+
+
 	public:
 		bool			loaded;			// Sound Loaded
 		std::string		filePath;		// file path
 	private:
-		ma_sound		m_sound;			// Internal miniaudio sound
-		uint32_t		m_engineSampleRate;	// Sample rate we have defined in the engine
+		ma_decoder		*m_pDecoder;	// Internal miniaudio decoder
+		ma_device		*m_pDevice;		// Internal miniaudio device for playback
 	};
 }

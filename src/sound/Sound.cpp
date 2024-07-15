@@ -8,7 +8,8 @@ namespace Phoenix {
 
 	Sound::Sound()
 		:
-		m_engineSampleRate(0),
+		m_pDecoder(nullptr),
+		m_pDevice(nullptr),
 		filePath(""),
 		loaded(false)
 	{
@@ -16,33 +17,83 @@ namespace Phoenix {
 
 	Sound::~Sound()
 	{
-		if (loaded) {
-			ma_sound_stop(&m_sound);
-			ma_sound_uninit(&m_sound);
-			loaded = false;
+		unLoadSong();
+	}
+
+	void Sound::unLoadSong()
+	{
+		if (m_pDevice) {
+			ma_device_stop(m_pDevice);
+			ma_device_uninit(m_pDevice);
+			free(m_pDevice);
+			m_pDevice = nullptr;
 		}
+		if (m_pDecoder) {
+			ma_decoder_uninit(m_pDecoder);
+			free(m_pDecoder);
+			m_pDecoder = nullptr;
+		}
+		loaded = false;
+	}
+
+	void Sound::dataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
+	{
+		Sound* p = (Sound*)pDevice->pUserData;
+
+		if (!p || p->m_pDecoder == nullptr) {
+			printf("\nwarning: sound object %p : pDevice=%p, pDecoder=%p\n", p, pDevice, p->m_pDecoder);
+			return;
+		}
+
+		
+		ma_decoder_read_pcm_frames(p->m_pDecoder, pOutput, frameCount, NULL);
 	}
 
 	bool Sound::loadSoundFile(const std::string_view soundFile, ma_engine& engine)
 	{
 		ma_result result;
 
-		// Re-load the file if needed
+		// If song is already loaded, we unload it first
 		if (loaded) {
-			ma_sound_uninit(&m_sound);
-			loaded = false;
+			unLoadSong();
 		}
 		filePath = soundFile;
-		// Disable sound Spatialization to save some resources, because we dont need it
-		result = ma_sound_init_from_file(&engine, soundFile.data(), MA_SOUND_FLAG_NO_SPATIALIZATION, NULL, NULL, &m_sound);
+		
+		// Allocate space for structure
+		m_pDevice = (ma_device*)malloc(sizeof(ma_device));
+		m_pDecoder = (ma_decoder*)malloc(sizeof(ma_decoder));
+
+		// Init de Decoder and load song
+		ma_decoder_config decoderConfig;
+		decoderConfig = ma_decoder_config_init(ma_format_f32, 2, 44100); // output format f32, 2 channels, 44100Hz (TODO: Parametrize this)
+		result = ma_decoder_init_file(soundFile.data(), &decoderConfig, m_pDecoder);
 		if (result != MA_SUCCESS) {
+			unLoadSong();
 			loaded = false;
+			return loaded;
 		}
 		else {
-			m_engineSampleRate = ma_engine_get_sample_rate(&engine);
 			loaded = true;
 		}
 		
+		// Init the device
+		ma_device_config deviceConfig;
+
+		deviceConfig = ma_device_config_init(ma_device_type_playback);
+		deviceConfig.playback.format = m_pDecoder->outputFormat;
+		deviceConfig.playback.channels = m_pDecoder->outputChannels;
+		deviceConfig.sampleRate = m_pDecoder->outputSampleRate;
+		deviceConfig.dataCallback = dataCallback;
+		deviceConfig.pUserData = this;
+
+		if (ma_device_init(NULL, &deviceConfig, m_pDevice) != MA_SUCCESS) {
+			// Failed to open playback device
+			unLoadSong();
+			loaded = false;
+			return loaded;
+		}
+
+		loaded = true;
 		return loaded;
 	}
 
@@ -50,7 +101,7 @@ namespace Phoenix {
 	{
 		ma_result result;
 		if (loaded) {
-			result = ma_sound_start(&m_sound);
+			result = ma_device_start(m_pDevice);
 			if (result != MA_SUCCESS) {
 				return false;
 			}
@@ -65,7 +116,7 @@ namespace Phoenix {
 	{
 		ma_result result;
 		if (loaded) {
-			result = ma_sound_stop(&m_sound);
+			result = ma_device_stop(m_pDevice);
 			if (result != MA_SUCCESS) {
 				return false;
 			}
@@ -80,7 +131,7 @@ namespace Phoenix {
 	{
 		ma_result result;
 		if (loaded) {
-			result = ma_sound_seek_to_pcm_frame(&m_sound,0);
+			result = ma_decoder_seek_to_pcm_frame(m_pDecoder, 0);
 			if (result != MA_SUCCESS) {
 				return false;
 			}
@@ -94,19 +145,20 @@ namespace Phoenix {
 	void Sound::seekSound(float second)
 	{
 		if (loaded) {
-			float myFFrame = static_cast<float>(m_engineSampleRate) * second;
+			float myFFrame = static_cast<float>(m_pDecoder->outputSampleRate) * second;
 			uint64_t myFrame = static_cast<uint64_t>(myFFrame);
-			ma_sound_seek_to_pcm_frame(&m_sound, myFrame);
-			//ma_sound_set_start_time_in_milliseconds(&m_sound, millisec);
+			ma_decoder_seek_to_pcm_frame(m_pDecoder, myFrame);
 		}
 	}
 
 	void Sound::setSoundVolume(float volume)
 	{
 		if (loaded) {
-			ma_sound_set_volume(&m_sound, volume);
+			ma_device_set_master_volume(m_pDevice, volume);
 		}
 	}
+
+
 
 
 }
