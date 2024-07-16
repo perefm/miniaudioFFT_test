@@ -19,6 +19,11 @@ namespace Phoenix {
 		m_inited = false;
 
 
+		// Setup FFT variables
+		memset(m_sampleBuf, 0, sizeof(float) * FFT_SIZE * 2);
+		m_fftcfg = kiss_fftr_alloc(FFT_SIZE * 2, false, NULL, NULL);
+		memset(m_fftBuffer, 0, sizeof(float) * FFT_SIZE);
+
 		// Allocate space for structure
 		m_pDevice = (ma_device*)malloc(sizeof(ma_device));
 
@@ -43,6 +48,8 @@ namespace Phoenix {
 		// needs to be done before starting the device. We need a context to initialize the event, which we can get from the device. Alternatively you can initialize
 		// a context separately, but we don't need to do that for this example.
 		ma_event_init(&m_stopEvent);
+
+		
 
 		m_inited = true;
 	}
@@ -217,9 +224,9 @@ namespace Phoenix {
 	void SoundManager::dataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 	{
 		float* pOutputF32 = (float*)pOutput;
-		SoundManager* p = (SoundManager*)pDevice->pUserData;
+		SoundManager* p_sm = (SoundManager*)pDevice->pUserData;
 
-		for (auto const& mySound : (p->sound)) {
+		for (auto const& mySound : (p_sm->sound)) {
 			if (mySound->status == Sound::State::Playing) {
 				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), pOutputF32, frameCount);
 				if (framesRead < frameCount) {
@@ -232,7 +239,42 @@ namespace Phoenix {
 		//if ((*pOutputF32) != 0.0)
 		//	printf("\noutput: %.5f",  (*pOutputF32));
 
+		// Fill the sampleBuffer for the FFT analysis
+		frameCount = frameCount < FFT_SIZE * 2 ? frameCount : FFT_SIZE * 2;
+
+		// Just rotate the buffer; copy existing, append new
+		const float* samples = (const float*)pOutputF32;
+		if (samples) {
+			float* p_sample = p_sm->m_sampleBuf;
+			for (uint32_t i = 0; i < FFT_SIZE * 2 - frameCount; i++)
+			{
+				*(p_sample++) = p_sm->m_sampleBuf[i + frameCount];
+			}
+			for (uint32_t i = 0; i < frameCount; i++)
+			{
+				*(p_sample++) = (samples[i * 2] + samples[i * 2 + 1]) / 2.0f * p_sm->m_fAmplification;
+			}
+		}
+		
 		(void)pInput;
+	}
+
+	bool SoundManager::performFFT()
+	{
+		if (!m_inited) {
+			return false;
+		}
+
+		kiss_fft_cpx out[FFT_SIZE + 1];
+		kiss_fftr(m_fftcfg, m_sampleBuf, out);
+
+		for (int i = 0; i < FFT_SIZE; i++)
+		{
+			static const float scaling = 1.0f / (float)FFT_SIZE;
+			m_fftBuffer[i] = 2.0f * sqrtf(out[i].r * out[i].r + out[i].i * out[i].i) * scaling;
+		}
+
+		return true;
 	}
 
 }

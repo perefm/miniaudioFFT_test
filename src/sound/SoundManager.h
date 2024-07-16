@@ -42,6 +42,9 @@ namespace Phoenix {
 		static ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount);
 		static void dataCallback (ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 		void destroyDevice();
+	
+	public:
+		bool performFFT();
 
 	private:
 		ma_device*		m_pDevice;		// Internal miniaudio device for playback
@@ -56,6 +59,8 @@ namespace Phoenix {
 		kiss_fftr_cfg				m_fftcfg;
 		float						m_sampleBuf[FFT_SIZE * 2];
 		float						m_fAmplification = 1.0f;
+	public:
+		float						m_fftBuffer[FFT_SIZE];
 
 	public:
 		std::vector<SP_Sound>	sound; // Sound list

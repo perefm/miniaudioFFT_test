@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <conio.h>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -51,6 +52,29 @@ void seekSound(SoundManager& sm, uint32_t id, float second) {
 	}
 }
 
+void fftAnalysis(SoundManager& sm) {
+			
+	while (!_kbhit()) {
+		sm.performFFT();
+		printf("\n");
+		
+		uint32_t bars = 32;
+		uint32_t blocks = FFT_SIZE / bars; // blocks inside spectrum
+		float value = 0;
+
+		for (uint32_t i = 0; i < blocks; i++) {
+			float value = 0;
+			for (uint32_t j = 0; j < bars; j++) {
+				value += sm.m_fftBuffer[i * bars + j]; // we accumulate values for the same bar
+			}
+			printf("%.1f ", value); // Print the value of the block
+		}
+			
+			
+	}
+}
+
+
 int main(int argc, char* argv[])
 {
 	SoundManager soundManager;
@@ -75,6 +99,8 @@ int main(int argc, char* argv[])
 	printf("\n\n8-Volume at 0%%");
 	printf("\n9-Volume at 50%%");
 	printf("\n0-Volume at 100%%");
+
+	printf("\n7- Show FFT analysis");
 
 	printf("\n\np-Clear all songs from memory");
 	
@@ -118,6 +144,10 @@ int main(int argc, char* argv[])
 			break;
 		case 'g':
 			seekSound(soundManager, 1, 10.0f);
+			break;
+
+		case '7':
+			fftAnalysis(soundManager);
 			break;
 
 		case '8':
