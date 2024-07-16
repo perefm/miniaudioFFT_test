@@ -10,7 +10,7 @@ namespace Phoenix {
 		:
 		m_pDecoder(nullptr),
 		filePath(""),
-		status(State::unloaded)
+		status(State::NotReady)
 	{
 	}
 
@@ -26,7 +26,7 @@ namespace Phoenix {
 			free(m_pDecoder);
 			m_pDecoder = nullptr;
 		}
-		status = State::unloaded;
+		status = State::NotReady;
 	}
 
 	bool Sound::loadSoundFile(const std::string_view soundFile, uint32_t channels, uint32_t sampleRate)
@@ -34,7 +34,7 @@ namespace Phoenix {
 		ma_result result;
 
 		// If song is already loaded, we unload it first
-		if (loaded) {
+		if (status != State::NotReady) {
 			unLoadSong();
 		}
 		filePath = soundFile;
@@ -51,14 +51,14 @@ namespace Phoenix {
 			return false;
 		}
 		
-		status = State::loaded;
+		status = State::Stopped;
 		return true;
 	}
 
 	bool Sound::playSound()
 	{
-		if (loaded) {
-			status = State::playing;
+		if (status != State::NotReady) {
+			status = State::Playing;
 			return true;
 		}
 		else
@@ -67,8 +67,8 @@ namespace Phoenix {
 
 	bool Sound::stopSound()
 	{
-		if (loaded) {
-			status = State::paused;
+		if (status != State::NotReady) {
+			status = State::Stopped;
 			return true;
 		}
 		else
@@ -78,7 +78,7 @@ namespace Phoenix {
 	bool Sound::restartSound()
 	{
 		ma_result result;
-		if (loaded) {
+		if (status != State::NotReady) {
 			result = ma_decoder_seek_to_pcm_frame(m_pDecoder, 0);
 			if (result != MA_SUCCESS) {
 				return false;
@@ -92,7 +92,7 @@ namespace Phoenix {
 
 	void Sound::seekSound(float second)
 	{
-		if (loaded) {
+		if (status != State::NotReady) {
 			float myFFrame = static_cast<float>(m_pDecoder->outputSampleRate) * second;
 			uint64_t myFrame = static_cast<uint64_t>(myFFrame);
 			ma_decoder_seek_to_pcm_frame(m_pDecoder, myFrame);

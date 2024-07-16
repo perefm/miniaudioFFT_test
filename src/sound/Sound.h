@@ -19,11 +19,10 @@ namespace Phoenix {
 
 	public:
 		enum State {
-			unloaded = 0,
-			loaded,
-			playing,
-			paused,
-			finished,
+			NotReady = 0,
+			Playing,
+			Stopped,
+			Finished,
 		};
 
 

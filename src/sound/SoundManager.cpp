@@ -220,7 +220,7 @@ namespace Phoenix {
 		SoundManager* p = (SoundManager*)pDevice->pUserData;
 
 		for (auto const& mySound : (p->sound)) {
-			if (mySound->status == Sound::State::playing) {
+			if (mySound->status == Sound::State::Playing) {
 				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), pOutputF32, frameCount);
 				if (framesRead < frameCount) {
 					mySound->stopSound();
