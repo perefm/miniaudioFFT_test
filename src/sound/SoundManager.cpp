@@ -22,6 +22,9 @@ namespace Phoenix {
 		memset(m_sampleBuf, 0, sizeof(float) * FFT_SIZE * 2);
 		m_fftcfg = kiss_fftr_alloc(FFT_SIZE * 2, false, NULL, NULL);
 		memset(m_fftBuffer, 0, sizeof(float) * FFT_SIZE);
+		for (int32_t i = 0; i < FFT_SIZE; i++) {
+			m_fftFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / FFT_SIZE);
+		}
 
 		// Allocate space for structure
 		m_pDevice = (ma_device*)malloc(sizeof(ma_device));
@@ -47,8 +50,6 @@ namespace Phoenix {
 		// needs to be done before starting the device. We need a context to initialize the event, which we can get from the device. Alternatively you can initialize
 		// a context separately, but we don't need to do that for this example.
 		ma_event_init(&m_stopEvent);
-
-		
 
 		m_inited = true;
 	}
@@ -266,12 +267,29 @@ namespace Phoenix {
 		kiss_fft_cpx out[FFT_SIZE + 1];			// FFT complex output
 		kiss_fftr(m_fftcfg, m_sampleBuf, out);
 
-		for (int i = 0; i < FFT_SIZE; i++)
+
+		m_lowFreqSum = 0.0f;
+		m_midFreqSum = 0.0f;
+		m_highFreqSum = 0.0f;
+
+		for (uint32_t i = 0; i < FFT_SIZE; i++)
 		{
+			// Calculate the FFT buffer
 			static const float scaling = 1.0f / (float)FFT_SIZE;
 			m_fftBuffer[i] = 2.0f * sqrtf(out[i].r * out[i].r + out[i].i * out[i].i) * scaling;
-		}
 
+			// Calculate the maximum value of the Low, Medium and High frequencies
+			if (m_fftFrequencies[i] <= m_lowFreqMax) {
+				m_lowFreqSum += m_fftBuffer[i];
+			}
+			else if (m_fftFrequencies[i] <= m_midFreqMax) {
+				m_midFreqSum += m_fftBuffer[i];
+			}
+			else {
+				m_highFreqSum += m_fftBuffer[i];
+			}
+		}
+		
 		return true;
 	}
 

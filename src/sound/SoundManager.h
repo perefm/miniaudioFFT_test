@@ -48,19 +48,29 @@ namespace Phoenix {
 
 	private:
 		ma_device*		m_pDevice;		// Internal miniaudio device for playback
-		ma_event		m_stopEvent;			// Signaled by the audio thread, waited on by the main thread.
+		ma_event		m_stopEvent;	// Signaled by the audio thread, waited on by the main thread.
 
 		int32_t			m_LoadedSounds; // Loaded sounds
 		bool			m_inited;
 
 		uint32_t		m_channels;
 		uint32_t		m_sampleRate;
+	
 		// FFT capture and analysis
-		kiss_fftr_cfg				m_fftcfg;
-		float						m_sampleBuf[FFT_SIZE * 2];
-		float						m_fAmplification = 1.0f;
+		kiss_fftr_cfg	m_fftcfg;
+		float			m_sampleBuf[FFT_SIZE * 2];
+		float			m_fAmplification = 1.0f;
+		
+		// Group magnitudes into low, mid, and high frequency bands
+		float			m_lowFreqMax = 400.0f;	// Low frequency max value
+		float			m_midFreqMax = 2000.0f;	// Mid frequency max value
+
 	public:
-		float						m_fftBuffer[FFT_SIZE];
+		float			m_fftBuffer[FFT_SIZE];		// FFT magnitues
+		float			m_fftFrequencies[FFT_SIZE];	// FFT frequencies analyzed
+		float			m_lowFreqSum = 0.0f;
+		float			m_midFreqSum = 0.0f;
+		float			m_highFreqSum = 0.0f;
 
 	public:
 		std::vector<SP_Sound>	sound; // Sound list
