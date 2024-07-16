@@ -17,8 +17,7 @@ namespace Phoenix {
 		sound.clear();
 		m_LoadedSounds = 0;
 		m_inited = false;
-
-
+			
 		// Setup FFT variables
 		memset(m_sampleBuf, 0, sizeof(float) * FFT_SIZE * 2);
 		m_fftcfg = kiss_fftr_alloc(FFT_SIZE * 2, false, NULL, NULL);
@@ -221,6 +220,7 @@ namespace Phoenix {
 		return totalFramesRead;
 	}
 
+
 	void SoundManager::dataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 	{
 		float* pOutputF32 = (float*)pOutput;
@@ -242,20 +242,18 @@ namespace Phoenix {
 		// Fill the sampleBuffer for the FFT analysis
 		frameCount = frameCount < FFT_SIZE * 2 ? frameCount : FFT_SIZE * 2;
 
-		// Just rotate the buffer; copy existing, append new
+		// Just rotate the buffer; copy existing, append new - https://github.com/Gargaj/Bonzomatic/blob/master/src/platform_common/FFT.cpp
 		const float* samples = (const float*)pOutputF32;
 		if (samples) {
 			float* p_sample = p_sm->m_sampleBuf;
-			for (uint32_t i = 0; i < FFT_SIZE * 2 - frameCount; i++)
-			{
-				*(p_sample++) = p_sm->m_sampleBuf[i + frameCount];
+			for (uint32_t i = frameCount; i < (FFT_SIZE * 2); i++) {
+				*(p_sample++) = p_sm->m_sampleBuf[i];
 			}
-			for (uint32_t i = 0; i < frameCount; i++)
-			{
+			for (uint32_t i = 0; i < frameCount; i++) {
 				*(p_sample++) = (samples[i * 2] + samples[i * 2 + 1]) / 2.0f * p_sm->m_fAmplification;
 			}
 		}
-		
+
 		(void)pInput;
 	}
 
@@ -265,7 +263,7 @@ namespace Phoenix {
 			return false;
 		}
 
-		kiss_fft_cpx out[FFT_SIZE + 1];
+		kiss_fft_cpx out[FFT_SIZE + 1];			// FFT complex output
 		kiss_fftr(m_fftcfg, m_sampleBuf, out);
 
 		for (int i = 0; i < FFT_SIZE; i++)

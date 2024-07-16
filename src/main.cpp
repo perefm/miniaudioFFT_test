@@ -85,16 +85,16 @@ int main(int argc, char* argv[])
 	soundManager.enumerateDevices();
 
 	printf("\nPress 'z' to quit...\n");
-	printf("\n1-Load song 1");
-	printf("\n2-Load song 2");
-	printf("\nq-Play song 1");
-	printf("\nw-Play song 2");
-	printf("\na-Stop song 1");
-	printf("\ns-Stop song 2");
-	printf("\nr-Reset song 1");
-	printf("\nt-Reset song 2");
-	printf("\nf-Jump to second 10 in song 1");
-	printf("\ng-Jump to second 10 in song 2");
+	printf("\n1-Load song \"piano.mp3\"");
+	printf("\n2-Load song \"2.5K-100hz.mp3\"");
+	printf("\nq-Play song 0");
+	printf("\nw-Play song 1");
+	printf("\na-Stop song 0");
+	printf("\ns-Stop song 1");
+	printf("\nr-Reset song 0");
+	printf("\nt-Reset song 1");
+	printf("\nf-Jump to second 10 in song 0");
+	printf("\ng-Jump to second 10 in song 1");
 
 	printf("\n\n8-Volume at 0%%");
 	printf("\n9-Volume at 50%%");
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 			printf("\nLoaded Song 1");
 			break;
 		case '2':
-			if (nullptr == soundManager.addSound("files/Low.mp3"))
+			if (nullptr == soundManager.addSound("files/2.5K-100hz.mp3"))
 					printf("\nError loading Song 2");
 			printf("\nLoaded Song 2");
 			break;
