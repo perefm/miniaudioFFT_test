@@ -27,7 +27,7 @@ namespace Phoenix {
 		~SoundManager();
 
 	public:
-		bool setVolume(float volume);
+		bool setMasterVolume(float volume);
 		SP_Sound addSound(const std::string_view filePath);
 		SP_Sound getSoundbyID(uint32_t id);
 		void clearSounds(); // Clear all sounds
@@ -39,7 +39,7 @@ namespace Phoenix {
 		void enumerateDevices();
 
 	private:
-		static ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount);
+		static ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, ma_uint32 frameCount);
 		static void dataCallback (ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 		void destroyDevice();
 	

@@ -44,6 +44,7 @@ namespace Phoenix {
 	public:
 		std::string		filePath;		// file path
 		Sound::State	status;			// Sound status
+		float			volume;			// Sound volume (0.0 to 1.0)
 
 	private:
 		ma_decoder		*m_pDecoder;	// Internal miniaudio decoder

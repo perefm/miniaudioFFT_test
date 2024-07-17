@@ -52,6 +52,15 @@ void seekSound(SoundManager& sm, uint32_t id, float second) {
 	}
 }
 
+void setSoundVolume(SoundManager& sm, uint32_t id, float volume) {
+	SP_Sound mySound;
+	mySound = sm.getSoundbyID(id);
+	if (mySound) {
+		mySound->volume = volume;
+		printf("\nSet volume %.2f on Sound %d - %s", volume, id, mySound->filePath.c_str());
+	}
+}
+
 void fftAnalysis(SoundManager& sm) {
 			
 	while (!_kbhit()) {
@@ -96,9 +105,13 @@ int main(int argc, char* argv[])
 	printf("\nf-Jump to second 10 in song 0");
 	printf("\ng-Jump to second 10 in song 1");
 
-	printf("\n\n8-Volume at 0%%");
-	printf("\n9-Volume at 50%%");
-	printf("\n0-Volume at 100%%");
+	printf("\n\n8-Master Volume at 0%%");
+	printf("\n9-Master Volume at 50%%");
+	printf("\n0-Master Volume at 100%%");
+
+	printf("\n\nu-Song 0 Volume at 0%%");
+	printf("\ni-Song 0 Volume at 50%%");
+	printf("\no-Song 0 Volume at 100%%");
 
 	printf("\n7- Show FFT analysis");
 
@@ -150,18 +163,30 @@ int main(int argc, char* argv[])
 			fftAnalysis(soundManager);
 			break;
 
+		// Master volume
 		case '8':
-			if (soundManager.setVolume(0.0f))
+			if (soundManager.setMasterVolume(0.0f))
 				printf("\nVolume at 0%%");
 			break;
 		case '9':
-			if (soundManager.setVolume(0.5f))
+			if (soundManager.setMasterVolume(0.5f))
 				printf("\nVolume at 50%%");
 			break;
-
 		case '0':
-			if (soundManager.setVolume(1.0f))
+			if (soundManager.setMasterVolume(1.0f))
 				printf("\nVolume at 100%%");
+			break;
+		
+		// individual song volume
+		case 'u':
+			setSoundVolume(soundManager, 0, 0.0f);
+			break;
+		case 'i':
+			setSoundVolume(soundManager, 0, 0.5f);
+			break;
+
+		case 'o':
+			setSoundVolume(soundManager, 0, 1.0f);
 			break;
 
 		case 'p':

@@ -72,7 +72,7 @@ namespace Phoenix {
 		}
 	}
 
-	bool SoundManager::setVolume(float volume)
+	bool SoundManager::setMasterVolume(float volume)
 	{
 		if (m_inited && m_pDevice) {
 			ma_device_set_master_volume(m_pDevice, volume);
@@ -178,8 +178,7 @@ namespace Phoenix {
 
 	}
 
-
-	ma_uint32 SoundManager::read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float* pOutputF32, ma_uint32 frameCount)
+	ma_uint32 SoundManager::read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, ma_uint32 frameCount)
 	{
 		/*
 		The way mixing works is that we just read into a temporary buffer, then take the contents of that buffer and mix it with the
@@ -208,7 +207,7 @@ namespace Phoenix {
 
 			/* Mix the frames together. */
 			for (iSample = 0; iSample < framesReadThisIteration * CHANNEL_COUNT; ++iSample) {
-				pOutputF32[totalFramesRead * CHANNEL_COUNT + iSample] += temp[iSample];
+				pOutputF32[totalFramesRead * CHANNEL_COUNT + iSample] += temp[iSample] * volume;
 			}
 
 			totalFramesRead += (ma_uint32)framesReadThisIteration;
@@ -226,10 +225,10 @@ namespace Phoenix {
 	{
 		float* pOutputF32 = (float*)pOutput;
 		SoundManager* p_sm = (SoundManager*)pDevice->pUserData;
-
+		
 		for (auto const& mySound : (p_sm->sound)) {
 			if (mySound->status == Sound::State::Playing) {
-				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), pOutputF32, frameCount);
+				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), mySound->volume, pOutputF32, frameCount);
 				if (framesRead < frameCount) {
 					mySound->stopSound();
 				}

@@ -10,7 +10,8 @@ namespace Phoenix {
 		:
 		m_pDecoder(nullptr),
 		filePath(""),
-		status(State::NotReady)
+		status(State::NotReady),
+		volume (1.0)
 	{
 	}
 
