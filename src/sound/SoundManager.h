@@ -19,7 +19,6 @@ namespace Phoenix {
 	#define CHANNEL_COUNT 2
 	#define SAMPLE_RATE 44100
 	#define SAMPLE_FORMAT ma_format_f32
-	#define SAMPLE_STORAGE	4096 // Sample storage size (4096 float samples)
 
 	class SoundManager final {
 
@@ -40,7 +39,7 @@ namespace Phoenix {
 		void enumerateDevices();
 
 	private:
-		static ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, float* pOutputFFTF32, ma_uint32 frameCount);
+		static ma_uint32 read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, ma_uint32 frameCount);
 		static void dataCallback (ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount);
 		void destroyDevice();
 	
@@ -61,7 +60,6 @@ namespace Phoenix {
 		kiss_fftr_cfg	m_fftcfg;
 		float			m_sampleBuf[FFT_SIZE * 2];
 		float			m_fAmplification = 1.0f;
-		float			m_fOutputFFTF32[SAMPLE_STORAGE]; // Buffer for storing the output samples, removing the impacts of the volume control
 		
 		// Group magnitudes into low, mid, and high frequency bands
 		float			m_lowFreqMax = 400.0f;	// Low frequency max value
