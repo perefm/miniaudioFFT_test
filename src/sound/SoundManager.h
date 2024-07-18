@@ -31,7 +31,7 @@ namespace Phoenix {
 		bool setMasterVolume(float volume);
 		SP_Sound addSound(const std::string_view filePath);
 		SP_Sound getSoundbyID(uint32_t id);
-		void clearSounds(); // Clear all sounds
+		void clearSounds();
 		std::string getVersion();
 
 		void playDevice();
@@ -59,17 +59,17 @@ namespace Phoenix {
 	
 		// FFT capture and analysis
 		kiss_fftr_cfg	m_fftcfg;
-		float			m_sampleBuf[FFT_SIZE * 2];
+		float*			m_pSampleBuf;				// Sample buffer used to capture Buffer values, to be sent to the FFT analyzer, Size is: (FFT_SIZE * 2)
 		float			m_fAmplification = 1.0f;
-		float			m_fOutputFFTF32[SAMPLE_STORAGE]; // Buffer for storing the output samples, removing the impacts of the volume control
+		float*			m_pOutputFFTF32;			// Buffer for storing the output samples, removing the impacts of the volume control, size is: SAMPLE_STORAGE
 		
 		// Group magnitudes into low, mid, and high frequency bands
 		float			m_lowFreqMax = 400.0f;	// Low frequency max value
 		float			m_midFreqMax = 2000.0f;	// Mid frequency max value
 
 	public:
-		float			m_fftBuffer[FFT_SIZE];		// FFT magnitues
-		float			m_fftFrequencies[FFT_SIZE];	// FFT frequencies analyzed
+		float*			m_pFFTBuffer;		// FFT magnitues, size is: FFT_SIZE
+		float*			m_pFFTFrequencies;	// FFT frequencies analyzed, size is: FFT_SIZE
 		float			m_lowFreqSum = 0.0f;
 		float			m_midFreqSum = 0.0f;
 		float			m_highFreqSum = 0.0f;

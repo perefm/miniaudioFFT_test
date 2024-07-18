@@ -8,9 +8,13 @@ namespace Phoenix {
 
 	SoundManager::SoundManager()
 		:
-		m_pDevice(nullptr),
 		m_channels(CHANNEL_COUNT),
-		m_sampleRate(SAMPLE_RATE)
+		m_sampleRate(SAMPLE_RATE),
+		m_pDevice(nullptr),
+		m_pOutputFFTF32(nullptr),
+		m_pSampleBuf(nullptr),
+		m_pFFTBuffer(nullptr),
+		m_pFFTFrequencies(nullptr)
 	{
 		ma_result result;
 
@@ -19,13 +23,30 @@ namespace Phoenix {
 		m_inited = false;
 
 		// Setup FFT variables
-		memset(m_sampleBuf, 0, sizeof(float) * FFT_SIZE * 2);
+		// Sample buffer
+		m_pSampleBuf = (float*)malloc(sizeof(float) * FFT_SIZE * 2);
+		if (m_pSampleBuf != nullptr)
+			memset(m_pSampleBuf, 0, sizeof(float) * FFT_SIZE * 2);
+		
+		// FFT config
 		m_fftcfg = kiss_fftr_alloc(FFT_SIZE * 2, false, NULL, NULL);
-		memset(m_fftBuffer, 0, sizeof(float) * FFT_SIZE);
+		
+		// FFT values buffer
+		m_pFFTBuffer = (float*)malloc(sizeof(float) * FFT_SIZE);
+		if (m_pFFTBuffer)
+			memset(m_pFFTBuffer, 0, sizeof(float) * FFT_SIZE);
+		
+		// FFT frequencies buffer
+		m_pFFTFrequencies = (float*)malloc(sizeof(float) * FFT_SIZE);
+		if (m_pFFTFrequencies)
 		for (int32_t i = 0; i < FFT_SIZE; i++) {
-			m_fftFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / FFT_SIZE);
+			m_pFFTFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / FFT_SIZE);
 		}
-		memset(m_fOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
+		
+		// FFT output buffer
+		m_pOutputFFTF32 = (float*)malloc(sizeof(float) * SAMPLE_STORAGE);
+		if (m_pOutputFFTF32)
+			memset(m_pOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
 
 		// Allocate space for structure
 		m_pDevice = (ma_device*)malloc(sizeof(ma_device));
@@ -61,6 +82,16 @@ namespace Phoenix {
 		ma_event_wait(&m_stopEvent);	// Wait the stop
 		destroyDevice();
 		clearSounds();
+
+		// Delete internal buffers
+		if (m_pSampleBuf)
+			free(m_pSampleBuf);
+		if (m_pOutputFFTF32)
+			free(m_pOutputFFTF32);
+		if (m_pFFTBuffer)
+			free(m_pFFTBuffer);
+		if (m_pFFTFrequencies)
+			free(m_pFFTFrequencies);
 	}
 
 	void SoundManager::destroyDevice()
@@ -181,13 +212,11 @@ namespace Phoenix {
 
 	ma_uint32 SoundManager::read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, float* pOutputFFTF32, ma_uint32 frameCount)
 	{
-		/*
-		The way mixing works is that we just read into a temporary buffer, then take the contents of that buffer and mix it with the
-		contents of the output buffer by simply adding the samples together. You could also clip the samples to -1..+1, but I'm not
-		doing that in this example.
-		*/
+		// The way mixing works is that we just read into a temporary buffer, then take the contents of that buffer and mix it with the
+		// contents of the output buffer by simply adding the samples together. You could also clip the samples to -1..+1, but I'm not
+		//doing that in this example.
 		ma_result result;
-		float temp[SAMPLE_STORAGE];
+		std::vector<float> temp(SAMPLE_STORAGE);
 		ma_uint32 tempCapInFrames = SAMPLE_STORAGE / CHANNEL_COUNT;
 		ma_uint32 totalFramesRead = 0;
 
@@ -201,7 +230,7 @@ namespace Phoenix {
 				framesToReadThisIteration = totalFramesRemaining;
 			}
 
-			result = ma_decoder_read_pcm_frames(pDecoder, temp, framesToReadThisIteration, &framesReadThisIteration);
+			result = ma_decoder_read_pcm_frames(pDecoder, temp.data(), framesToReadThisIteration, &framesReadThisIteration);
 			if (result != MA_SUCCESS || framesReadThisIteration == 0) {
 				break;
 			}
@@ -227,39 +256,34 @@ namespace Phoenix {
 
 	void SoundManager::dataCallback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount)
 	{
+		(void)pInput; // added to avoid compiler warnings. It does nothing.
 		float* pOutputF32 = (float*)pOutput;
 		SoundManager* p_sm = (SoundManager*)pDevice->pUserData;
-		memset(p_sm->m_fOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
+		memset(p_sm->m_pOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
 
 		for (auto const& mySound : (p_sm->sound)) {
 			if (mySound->status == Sound::State::Playing) {
-				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), mySound->volume, pOutputF32, p_sm->m_fOutputFFTF32, frameCount);
+				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), mySound->volume, pOutputF32, p_sm->m_pOutputFFTF32, frameCount);
 				if (framesRead < frameCount) {
 					mySound->stopSound();
 				}
 			}
 		}
 
-		//debug
-		//if ((*pOutputF32) != 0.0)
-		//	printf("\noutput: %.5f",  (*pOutputF32));
-
 		// Fill the sampleBuffer for the FFT analysis
 		frameCount = frameCount < FFT_SIZE * 2 ? frameCount : FFT_SIZE * 2;
 
 		// Just rotate the buffer; copy existing, append new - https://github.com/Gargaj/Bonzomatic/blob/master/src/platform_common/FFT.cpp
-		const float* samples = (const float*)p_sm->m_fOutputFFTF32;
+		const float* samples = (const float*)p_sm->m_pOutputFFTF32;
 		if (samples) {
-			float* p_sample = p_sm->m_sampleBuf;
+			float* p_sample = p_sm->m_pSampleBuf;
 			for (uint32_t i = frameCount; i < (FFT_SIZE * 2); i++) {
-				*(p_sample++) = p_sm->m_sampleBuf[i];
+				*(p_sample++) = p_sm->m_pSampleBuf[i];
 			}
 			for (uint32_t i = 0; i < frameCount; i++) {
 				*(p_sample++) = (samples[i * 2] + samples[i * 2 + 1]) / 2.0f * p_sm->m_fAmplification;
 			}
 		}
-
-		(void)pInput;
 	}
 
 	bool SoundManager::performFFT()
@@ -269,7 +293,7 @@ namespace Phoenix {
 		}
 
 		kiss_fft_cpx out[FFT_SIZE + 1];			// FFT complex output
-		kiss_fftr(m_fftcfg, m_sampleBuf, out);
+		kiss_fftr(m_fftcfg, m_pSampleBuf, out);
 
 
 		m_lowFreqSum = 0.0f;
@@ -280,17 +304,17 @@ namespace Phoenix {
 		{
 			// Calculate the FFT buffer
 			static const float scaling = 1.0f / (float)FFT_SIZE;
-			m_fftBuffer[i] = 2.0f * sqrtf(out[i].r * out[i].r + out[i].i * out[i].i) * scaling;
+			m_pFFTBuffer[i] = 2.0f * sqrtf(out[i].r * out[i].r + out[i].i * out[i].i) * scaling;
 
 			// Calculate the maximum value of the Low, Medium and High frequencies
-			if (m_fftFrequencies[i] <= m_lowFreqMax) {
-				m_lowFreqSum += m_fftBuffer[i];
+			if (m_pFFTFrequencies[i] <= m_lowFreqMax) {
+				m_lowFreqSum += m_pFFTBuffer[i];
 			}
-			else if (m_fftFrequencies[i] <= m_midFreqMax) {
-				m_midFreqSum += m_fftBuffer[i];
+			else if (m_pFFTFrequencies[i] <= m_midFreqMax) {
+				m_midFreqSum += m_pFFTBuffer[i];
 			}
 			else {
-				m_highFreqSum += m_fftBuffer[i];
+				m_highFreqSum += m_pFFTBuffer[i];
 			}
 		}
 

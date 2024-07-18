@@ -74,7 +74,7 @@ void fftAnalysis(SoundManager& sm) {
 		for (uint32_t i = 0; i < blocks; i++) {
 			float value = 0;
 			for (uint32_t j = 0; j < bars; j++) {
-				value += sm.m_fftBuffer[i * bars + j]; // we accumulate values for the same bar
+				value += sm.m_pFFTBuffer[i * bars + j]; // we accumulate values for the same bar
 			}
 			printf("%.1f ", value); // Print the value of the block
 		}
@@ -94,8 +94,8 @@ int main(int argc, char* argv[])
 	soundManager.enumerateDevices();
 
 	printf("\nPress 'z' to quit...\n");
-	printf("\n1-Load song \"piano.mp3\"");
-	printf("\n2-Load song \"2.5K-100hz.mp3\"");
+	printf("\n1-Load song: \"piano.mp3\"");
+	printf("\n2-Load song: \"1-20kHz.wav\"");
 	printf("\nq-Play song 0");
 	printf("\nw-Play song 1");
 	printf("\na-Stop song 0");
@@ -125,14 +125,21 @@ int main(int argc, char* argv[])
 		charCaptured = getchar();
 		switch (charCaptured) {
 		case '1':
-			if (nullptr == soundManager.addSound("files/piano.mp3"))
-				printf("\nError loading Song 1");
-			printf("\nLoaded Song 1");
+			if (!soundManager.addSound("files/music.mp3"))
+				printf("\nError loading Song");
+			else {
+				int slot = static_cast<int>(soundManager.sound.size()) - 1;
+				printf("\nLoaded Song %s in slot %d", soundManager.sound[slot]->filePath.c_str(), slot);
+			}
+				
 			break;
 		case '2':
-			if (nullptr == soundManager.addSound("files/2.5K-100hz.mp3"))
-					printf("\nError loading Song 2");
-			printf("\nLoaded Song 2");
+			if (!soundManager.addSound("files/1-20kHz.wav"))
+				printf("\nError loading Song");
+			else {
+				int slot = static_cast<int>(soundManager.sound.size()) - 1;
+				printf("\nLoaded Song %s in slot %d", soundManager.sound[slot]->filePath.c_str(), slot);
+			}
 			break;
 		case 'q':
 			playSound(soundManager, 0);
