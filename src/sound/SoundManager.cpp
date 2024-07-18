@@ -25,6 +25,7 @@ namespace Phoenix {
 		for (int32_t i = 0; i < FFT_SIZE; i++) {
 			m_fftFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / FFT_SIZE);
 		}
+		memset(m_fOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
 
 		// Allocate space for structure
 		m_pDevice = (ma_device*)malloc(sizeof(ma_device));
@@ -178,7 +179,7 @@ namespace Phoenix {
 
 	}
 
-	ma_uint32 SoundManager::read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, ma_uint32 frameCount)
+	ma_uint32 SoundManager::read_and_mix_pcm_frames_f32(ma_decoder* pDecoder, float volume, float* pOutputF32, float* pOutputFFTF32, ma_uint32 frameCount)
 	{
 		/*
 		The way mixing works is that we just read into a temporary buffer, then take the contents of that buffer and mix it with the
@@ -186,13 +187,13 @@ namespace Phoenix {
 		doing that in this example.
 		*/
 		ma_result result;
-		float temp[4096];
-		ma_uint32 tempCapInFrames = sizeof(temp) / sizeof(temp[0]) / CHANNEL_COUNT;
-		//ma_uint32 tempCapInFrames = ma_countof(temp) / CHANNEL_COUNT;
+		float temp[SAMPLE_STORAGE];
+		ma_uint32 tempCapInFrames = SAMPLE_STORAGE / CHANNEL_COUNT;
 		ma_uint32 totalFramesRead = 0;
 
 		while (totalFramesRead < frameCount) {
 			ma_uint64 iSample;
+			ma_uint64 iOutputSample;
 			ma_uint64 framesReadThisIteration;
 			ma_uint32 totalFramesRemaining = frameCount - totalFramesRead;
 			ma_uint32 framesToReadThisIteration = tempCapInFrames;
@@ -205,9 +206,12 @@ namespace Phoenix {
 				break;
 			}
 
+			
 			/* Mix the frames together. */
 			for (iSample = 0; iSample < framesReadThisIteration * CHANNEL_COUNT; ++iSample) {
-				pOutputF32[totalFramesRead * CHANNEL_COUNT + iSample] += temp[iSample] * volume;
+				iOutputSample = totalFramesRead * CHANNEL_COUNT + iSample;
+				pOutputF32[iOutputSample] += temp[iSample] * volume;
+				pOutputFFTF32[iOutputSample] += temp[iSample];
 			}
 
 			totalFramesRead += (ma_uint32)framesReadThisIteration;
@@ -225,10 +229,11 @@ namespace Phoenix {
 	{
 		float* pOutputF32 = (float*)pOutput;
 		SoundManager* p_sm = (SoundManager*)pDevice->pUserData;
+		memset(p_sm->m_fOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
 		
 		for (auto const& mySound : (p_sm->sound)) {
 			if (mySound->status == Sound::State::Playing) {
-				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), mySound->volume, pOutputF32, frameCount);
+				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), mySound->volume, pOutputF32, p_sm->m_fOutputFFTF32, frameCount);
 				if (framesRead < frameCount) {
 					mySound->stopSound();
 				}
@@ -243,7 +248,7 @@ namespace Phoenix {
 		frameCount = frameCount < FFT_SIZE * 2 ? frameCount : FFT_SIZE * 2;
 
 		// Just rotate the buffer; copy existing, append new - https://github.com/Gargaj/Bonzomatic/blob/master/src/platform_common/FFT.cpp
-		const float* samples = (const float*)pOutputF32;
+		const float* samples = (const float*)p_sm->m_fOutputFFTF32;
 		if (samples) {
 			float* p_sample = p_sm->m_sampleBuf;
 			for (uint32_t i = frameCount; i < (FFT_SIZE * 2); i++) {
