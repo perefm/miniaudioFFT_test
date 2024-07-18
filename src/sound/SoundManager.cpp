@@ -17,7 +17,7 @@ namespace Phoenix {
 		sound.clear();
 		m_LoadedSounds = 0;
 		m_inited = false;
-			
+
 		// Setup FFT variables
 		memset(m_sampleBuf, 0, sizeof(float) * FFT_SIZE * 2);
 		m_fftcfg = kiss_fftr_alloc(FFT_SIZE * 2, false, NULL, NULL);
@@ -62,7 +62,7 @@ namespace Phoenix {
 		destroyDevice();
 		clearSounds();
 	}
-	
+
 	void SoundManager::destroyDevice()
 	{
 		if (m_pDevice) {
@@ -106,7 +106,7 @@ namespace Phoenix {
 			}
 		}
 		return p_sound;
-		
+
 	}
 
 	SP_Sound SoundManager::getSoundbyID(uint32_t id)
@@ -188,12 +188,12 @@ namespace Phoenix {
 		*/
 		ma_result result;
 		float temp[SAMPLE_STORAGE];
-		ma_uint32 tempCapInFrames = sizeof(temp) / sizeof(temp[0]) / CHANNEL_COUNT;
-		//ma_uint32 tempCapInFrames = ma_countof(temp) / CHANNEL_COUNT;
+		ma_uint32 tempCapInFrames = SAMPLE_STORAGE / CHANNEL_COUNT;
 		ma_uint32 totalFramesRead = 0;
 
 		while (totalFramesRead < frameCount) {
 			ma_uint64 iSample;
+			ma_uint64 iOutputSample;
 			ma_uint64 framesReadThisIteration;
 			ma_uint32 totalFramesRemaining = frameCount - totalFramesRead;
 			ma_uint32 framesToReadThisIteration = tempCapInFrames;
@@ -206,10 +206,12 @@ namespace Phoenix {
 				break;
 			}
 
+
 			/* Mix the frames together. */
 			for (iSample = 0; iSample < framesReadThisIteration * CHANNEL_COUNT; ++iSample) {
-				pOutputF32[totalFramesRead * CHANNEL_COUNT + iSample] += temp[iSample] * volume;
-				pOutputFFTF32[totalFramesRead * CHANNEL_COUNT + iSample] += temp[iSample];
+				iOutputSample = totalFramesRead * CHANNEL_COUNT + iSample;
+				pOutputF32[iOutputSample] += temp[iSample] * volume;
+				pOutputFFTF32[iOutputSample] += temp[iSample];
 			}
 
 			totalFramesRead += (ma_uint32)framesReadThisIteration;
@@ -228,7 +230,7 @@ namespace Phoenix {
 		float* pOutputF32 = (float*)pOutput;
 		SoundManager* p_sm = (SoundManager*)pDevice->pUserData;
 		memset(p_sm->m_fOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
-		
+
 		for (auto const& mySound : (p_sm->sound)) {
 			if (mySound->status == Sound::State::Playing) {
 				ma_uint32 framesRead = read_and_mix_pcm_frames_f32(mySound->getDecoder(), mySound->volume, pOutputF32, p_sm->m_fOutputFFTF32, frameCount);
@@ -291,7 +293,7 @@ namespace Phoenix {
 				m_highFreqSum += m_fftBuffer[i];
 			}
 		}
-		
+
 		return true;
 	}
 
