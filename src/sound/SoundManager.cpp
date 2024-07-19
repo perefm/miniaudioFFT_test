@@ -30,7 +30,7 @@ namespace Phoenix {
 		
 		// FFT config
 		m_fftcfg = kiss_fftr_alloc(FFT_SIZE * 2, false, NULL, NULL);
-		
+				
 		// FFT values buffer
 		m_pFFTBuffer = (float*)malloc(sizeof(float) * FFT_SIZE);
 		if (m_pFFTBuffer)
@@ -82,6 +82,7 @@ namespace Phoenix {
 		ma_event_wait(&m_stopEvent);	// Wait the stop
 		destroyDevice();
 		clearSounds();
+		kiss_fft_free(m_fftcfg);		// Free fft
 
 		// Delete internal buffers
 		if (m_pSampleBuf)

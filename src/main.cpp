@@ -66,20 +66,21 @@ void fftAnalysis(SoundManager& sm) {
 	while (!_kbhit()) {
 		sm.performFFT();
 		printf("\n");
-		/*
+		
 		uint32_t bars = 32;
 		uint32_t blocks = FFT_SIZE / bars; // blocks inside spectrum
 		float value = 0;
 
 		for (uint32_t i = 0; i < blocks; i++) {
+
 			float value = 0;
 			for (uint32_t j = 0; j < bars; j++) {
 				value += sm.m_pFFTBuffer[i * bars + j]; // we accumulate values for the same bar
 			}
 			printf("%.1f ", value); // Print the value of the block
 		}
-		*/
-		printf("%.1f - %.1f - %.1f", sm.m_lowFreqSum, sm.m_midFreqSum, sm.m_highFreqSum); // Print the value of the Frequencies analyzed
+		
+		//printf("%.1f - %.1f - %.1f", sm.m_lowFreqSum, sm.m_midFreqSum, sm.m_highFreqSum); // Print the value of the Frequencies analyzed
 	}
 }
 
