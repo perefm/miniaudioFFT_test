@@ -1,4 +1,4 @@
-# 2018-2020, Spontz
+# 2018-2024, Spontz
 
 cmake_minimum_required(VERSION 3.8)
 set(CMAKE_TOOLCHAIN_FILE "../vcpkg/scripts/buildsystems/vcpkg.cmake")

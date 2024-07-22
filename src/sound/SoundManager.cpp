@@ -40,7 +40,7 @@ namespace Phoenix {
 		m_pFFTFrequencies = (float*)malloc(sizeof(float) * FFT_SIZE);
 		if (m_pFFTFrequencies)
 		for (int32_t i = 0; i < FFT_SIZE; i++) {
-			m_pFFTFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / FFT_SIZE);
+			m_pFFTFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / 2.0f / FFT_SIZE);
 		}
 		
 		// FFT output buffer
