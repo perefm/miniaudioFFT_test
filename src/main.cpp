@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <chrono>
+
 
 #define PHOENIX_MAIN
 #include "main.h"
@@ -63,14 +65,26 @@ void setSoundVolume(SoundManager& sm, uint32_t id, float volume) {
 
 void fftAnalysis(SoundManager& sm) {
 			
+	std::chrono::steady_clock::time_point start_time = std::chrono::steady_clock::now();
+	std::chrono::steady_clock::time_point end_time = std::chrono::steady_clock::now();
+
+
 	while (!_kbhit()) {
-		sm.performFFT();
+		start_time = std::chrono::steady_clock::now();
+		std::chrono::duration<float> frame_time = start_time - end_time;
+
+		sm.performFFT(frame_time.count());
+
+		end_time = std::chrono::steady_clock::now();
+
 		printf("\n");
 		
 		uint32_t bars = 32;
 		uint32_t blocks = FFT_SIZE / bars; // blocks inside spectrum
 		float value = 0;
-
+		
+		/*
+		// Histogram
 		for (uint32_t i = 0; i < blocks; i++) {
 
 			float value = 0;
@@ -79,8 +93,13 @@ void fftAnalysis(SoundManager& sm) {
 			}
 			printf("%.1f ", value); // Print the value of the block
 		}
-		
+		*/
+
+		// L/M/H value frequencies
 		//printf("%.1f - %.1f - %.1f", sm.m_lowFreqSum, sm.m_midFreqSum, sm.m_highFreqSum); // Print the value of the Frequencies analyzed
+
+		// Beat detection
+		printf("Beat: %.5f", sm.m_fBeat); // Print the beat value
 	}
 }
 

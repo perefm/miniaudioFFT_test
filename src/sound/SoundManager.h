@@ -45,7 +45,7 @@ namespace Phoenix {
 		void destroyDevice();
 	
 	public:
-		bool performFFT();
+		bool performFFT(float currentTime);
 
 	private:
 		ma_device*		m_pDevice;		// Internal miniaudio device for playback
@@ -64,15 +64,26 @@ namespace Phoenix {
 		float*			m_pOutputFFTF32;			// Buffer for storing the output samples, removing the impacts of the volume control, size is: SAMPLE_STORAGE
 		
 		// Group magnitudes into low, mid, and high frequency bands
-		float			m_lowFreqMax = 400.0f;	// Low frequency max value
-		float			m_midFreqMax = 2000.0f;	// Mid frequency max value
+		float			m_lowFreqMax = 400.0f;		// Low frequency max value: Adjustable parameter
+		float			m_midFreqMax = 2000.0f;		// Mid frequency max value: Adjustable parameter
 
+		// BEAT detection
+		float*			m_pEnergy;					// Energy buffer
+		uint32_t		m_iPosition = 1;			// Position
+		float			m_fIntensity = 0;			// Intensity
 	public:
-		float*			m_pFFTBuffer;		// FFT magnitues, size is: FFT_SIZE
-		float*			m_pFFTFrequencies;	// FFT frequencies analyzed, size is: FFT_SIZE
-		float			m_lowFreqSum = 0.0f;
-		float			m_midFreqSum = 0.0f;
-		float			m_highFreqSum = 0.0f;
+		float			m_fBeatRatio = 1.4f;		// Beat Ratio: Adjustable parameter
+		float			m_fFadeOut = 4.0f;			// Fade Out: Adjustable parameter
+		float			m_fBeat = 0;				// Beat detection (0 to 1)
+
+		
+	private:
+		float*			m_pFFTFrequencies;		// FFT frequencies analyzed, size is: FFT_SIZE
+	public:
+		float*			m_pFFTBuffer;			// FFT magnitues, size is: FFT_SIZE
+		float			m_fLowFreqSum = 0.0f;
+		float			m_fMidFreqSum = 0.0f;
+		float			m_fHighFreqSum = 0.0f;
 
 	public:
 		std::vector<SP_Sound>	sound; // Sound list

@@ -14,7 +14,8 @@ namespace Phoenix {
 		m_pOutputFFTF32(nullptr),
 		m_pSampleBuf(nullptr),
 		m_pFFTBuffer(nullptr),
-		m_pFFTFrequencies(nullptr)
+		m_pFFTFrequencies(nullptr),
+		m_pEnergy(nullptr)
 	{
 		ma_result result;
 
@@ -38,15 +39,21 @@ namespace Phoenix {
 		
 		// FFT frequencies buffer
 		m_pFFTFrequencies = (float*)malloc(sizeof(float) * FFT_SIZE);
-		if (m_pFFTFrequencies)
-		for (int32_t i = 0; i < FFT_SIZE; i++) {
-			m_pFFTFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / 2.0f / FFT_SIZE);
+		if (m_pFFTFrequencies) {
+			for (int32_t i = 0; i < FFT_SIZE; i++) {
+				m_pFFTFrequencies[i] = static_cast<float>(i) * (SAMPLE_RATE / 2.0f / FFT_SIZE);
+			}
 		}
-		
+
 		// FFT output buffer
 		m_pOutputFFTF32 = (float*)malloc(sizeof(float) * SAMPLE_STORAGE);
 		if (m_pOutputFFTF32)
 			memset(m_pOutputFFTF32, 0, sizeof(float) * SAMPLE_STORAGE);
+
+		// BEAT buffer
+		m_pEnergy = (float*)malloc(sizeof(float) * FFT_SIZE);
+		if (m_pEnergy)
+			memset(m_pEnergy, 0, sizeof(float) * FFT_SIZE);
 
 		// Allocate space for structure
 		m_pDevice = (ma_device*)malloc(sizeof(ma_device));
@@ -93,6 +100,8 @@ namespace Phoenix {
 			free(m_pFFTBuffer);
 		if (m_pFFTFrequencies)
 			free(m_pFFTFrequencies);
+		if (m_pEnergy)
+			free(m_pEnergy);
 	}
 
 	void SoundManager::destroyDevice()
@@ -287,7 +296,7 @@ namespace Phoenix {
 		}
 	}
 
-	bool SoundManager::performFFT()
+	bool SoundManager::performFFT(float frameTime)
 	{
 		if (!m_inited) {
 			return false;
@@ -297,9 +306,10 @@ namespace Phoenix {
 		kiss_fftr(m_fftcfg, m_pSampleBuf, out);
 
 
-		m_lowFreqSum = 0.0f;
-		m_midFreqSum = 0.0f;
-		m_highFreqSum = 0.0f;
+		m_fLowFreqSum = 0.0f;
+		m_fMidFreqSum = 0.0f;
+		m_fHighFreqSum = 0.0f;
+		m_fBeat = 0.0f;
 
 		for (uint32_t i = 0; i < FFT_SIZE; i++)
 		{
@@ -309,14 +319,54 @@ namespace Phoenix {
 
 			// Calculate the maximum value of the Low, Medium and High frequencies
 			if (m_pFFTFrequencies[i] <= m_lowFreqMax) {
-				m_lowFreqSum += m_pFFTBuffer[i];
+				m_fLowFreqSum += m_pFFTBuffer[i];
 			}
 			else if (m_pFFTFrequencies[i] <= m_midFreqMax) {
-				m_midFreqSum += m_pFFTBuffer[i];
+				m_fMidFreqSum += m_pFFTBuffer[i];
 			}
 			else {
-				m_highFreqSum += m_pFFTBuffer[i];
+				m_fHighFreqSum += m_pFFTBuffer[i];
 			}
+		}
+
+		// Calculate the BEAT
+		float instant = 0;	// Instant
+		float avg = 0;		// Average energy
+		
+		for (uint32_t i = 0; i < FFT_SIZE; i++)
+			instant += m_pFFTBuffer[i]/2.0f;
+		
+		// calculate average energy in last samples
+		for (uint32_t i = 0; i < FFT_SIZE; i++) {
+			avg += m_pEnergy[i];
+		}
+		avg /= (float)m_iPosition;
+
+		// instant sample is a beat?
+		if ((instant / avg) > m_fBeatRatio) {
+			m_fIntensity = 1.0f;
+		}
+		else if (m_fIntensity > 0) {
+			m_fIntensity -= m_fFadeOut * frameTime;
+			if (m_fIntensity < 0) m_fIntensity = 0;
+		}
+
+		// updated kernel shared variable
+		// to be used by kernel itself or another sections
+		m_fBeat += m_fIntensity;
+		if (m_fBeat > 1.0)
+			m_fBeat = 1.0f;
+
+		// update energy buffer
+		if (m_iPosition < FFT_SIZE) {
+			m_pEnergy[m_iPosition - 1] = instant;
+			m_iPosition++;
+		}
+		else {
+			for (uint32_t i = 1; i < FFT_SIZE; i++) {
+				m_pEnergy[i - 1] = m_pEnergy[i];
+			}
+			m_pEnergy[FFT_SIZE - 1] = instant;
 		}
 
 		return true;
